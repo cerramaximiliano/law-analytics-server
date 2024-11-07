@@ -2,6 +2,7 @@
 const express = require("express");
 const connectDB = require("./utils/db");
 const authRoutes = require("./routes/authRoutes");
+const emailRoutes = require('./routes/emailRoutes');
 const logger = require("./utils/logger");
 const cors = require("cors");
 require("dotenv").config();
@@ -20,6 +21,7 @@ app.use((req, res, next) => {
 
 // Configurar rutas
 app.use("/api/auth", authRoutes);
+app.use('/api', emailRoutes);
 
 // Ruta de prueba
 app.get("/", (req, res) => {
