@@ -1,12 +1,7 @@
 // app.js
 const express = require("express");
 const connectDB = require("./utils/db");
-const authRoutes = require("./routes/authRoutes");
-const emailRoutes = require("./routes/emailRoutes");
-const alertRoutes = require("./routes/alertRoutes");
-const contactRoutes = require("./routes/contactRoutes");
-const cloudinaryRoutes = require("./routes/cloudinaryRoutes");
-const folder = require("./routes/folderRoutes");
+const routes = require("./routes");
 const logger = require("./utils/logger");
 const cors = require("cors");
 const fileUpload = require("express-fileupload");
@@ -45,12 +40,7 @@ app.use((req, res, next) => {
 });
 
 // Configurar rutas
-app.use("/api/auth", authRoutes);
-app.use("/api", emailRoutes);
-app.use("/alert", alertRoutes);
-app.use("/cloudinary", cloudinaryRoutes);
-app.use("/api/contacts", contactRoutes);
-app.use("/api/folders", folder);
+app.use(routes);
 
 // Ruta de prueba
 app.get("/", (req, res) => {

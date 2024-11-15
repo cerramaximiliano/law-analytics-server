@@ -16,6 +16,7 @@ exports.getFoldersByUserId = async (req, res) => {
   }
 };
 
+
 // Crear un nuevo folder
 exports.createFolder = async (req, res) => {
   try {
