@@ -7,15 +7,37 @@ exports.getFoldersByUserId = async (req, res) => {
   try {
     const { userId } = req.params;
     const folders = await Folder.find({ userId });
-    res.status(200).json(folders);
+    res.status(200).json({ success: true, folders });
   } catch (error) {
     console.error("Error al obtener folders por userId:", error);
     res
       .status(500)
-      .json({ message: "Error al obtener folders por userId", error });
+      .json({
+        success: false,
+        message: "Error al obtener folders por userId",
+        error,
+      });
   }
 };
 
+// Buscar todos los folders por groupId
+exports.getFoldersById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const folder = await Folder.findOne({ _id: id });
+    console.log(folder);
+    res.status(200).json({ success: true, folder });
+  } catch (error) {
+    console.error("Error al obtener folders por groupId:", error);
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Error al obtener folders por groupId",
+        error,
+      });
+  }
+};
 
 // Crear un nuevo folder
 exports.createFolder = async (req, res) => {
@@ -23,12 +45,13 @@ exports.createFolder = async (req, res) => {
     const folderData = req.body;
     console.log(folderData);
     const newFolder = await Folder.create(folderData);
-    res
-      .status(201)
-      .json({ message: "Folder creado exitosamente", folder: newFolder });
+
+    res.status(201).json({ success: true, folder: newFolder });
   } catch (error) {
     console.error("Error al crear el folder:", error);
-    res.status(500).json({ message: "Error al crear el folder", error });
+    res
+      .status(500)
+      .json({ success: false, message: "Error al crear el folder", error });
   }
 };
 
@@ -37,12 +60,16 @@ exports.getFoldersByGroupId = async (req, res) => {
   try {
     const { groupId } = req.params;
     const folders = await Folder.find({ groupId });
-    res.status(200).json(folders);
+    res.status(200).json({ success: true, folders });
   } catch (error) {
     console.error("Error al obtener folders por groupId:", error);
     res
       .status(500)
-      .json({ message: "Error al obtener folders por groupId", error });
+      .json({
+        success: false,
+        message: "Error al obtener folders por groupId",
+        error,
+      });
   }
 };
 
@@ -52,15 +79,19 @@ exports.deleteFolderById = async (req, res) => {
     const { id } = req.params;
     const deletedFolder = await Folder.findByIdAndDelete(id);
     if (!deletedFolder) {
-      return res.status(404).json({ message: "Folder no encontrado" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Folder no encontrado" });
     }
     res.status(200).json({
-      message: "Folder eliminado exitosamente",
+      success: true,
       folder: deletedFolder,
     });
   } catch (error) {
     console.error("Error al eliminar el folder:", error);
-    res.status(500).json({ message: "Error al eliminar el folder", error });
+    res
+      .status(500)
+      .json({ success: false, message: "Error al eliminar el folder", error });
   }
 };
 
@@ -73,14 +104,23 @@ exports.updateFolderById = async (req, res) => {
       new: true,
     });
     if (!updatedFolder) {
-      return res.status(404).json({ message: "Folder no encontrado" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Folder no encontrado" });
     }
     res.status(200).json({
+      success: true,
       message: "Folder actualizado exitosamente",
       folder: updatedFolder,
     });
   } catch (error) {
     console.error("Error al actualizar el folder:", error);
-    res.status(500).json({ message: "Error al actualizar el folder", error });
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Error al actualizar el folder",
+        error,
+      });
   }
 };

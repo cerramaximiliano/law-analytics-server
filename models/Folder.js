@@ -125,6 +125,9 @@ const FolderSchema = new Schema(
       ref: "Group",
       required: false,
     },
+    situationFolder: {
+      type: String,
+    },
   },
   {
     timestamps: true,

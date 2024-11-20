@@ -18,6 +18,7 @@ const createEvent = async (req, res) => {
 const getEventsByUserId = async (req, res) => {
   try {
     const events = await Event.find({ userId: req.params.userId });
+    console.log(events);
     res.status(200).json({ success: true, events });
   } catch (error) {
     res

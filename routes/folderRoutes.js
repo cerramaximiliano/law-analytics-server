@@ -9,6 +9,7 @@ const {
   deleteFolderById,
   updateFolderById,
   getFoldersByUserId,
+  getFoldersById,
 } = require("../controllers/folderController.js");
 
 // Ruta para buscar todos los folders por userId
@@ -19,6 +20,9 @@ router.post("/", createFolder);
 
 // Ruta para buscar todos los folders por groupId
 router.get("/group/:groupId", getFoldersByGroupId);
+
+// Ruta para buscar todos los folders por id
+router.get("/:id", getFoldersById);
 
 // Ruta para eliminar un folder por _id
 router.delete("/:id", deleteFolderById);
