@@ -10,13 +10,11 @@ exports.getFoldersByUserId = async (req, res) => {
     res.status(200).json({ success: true, folders });
   } catch (error) {
     console.error("Error al obtener folders por userId:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Error al obtener folders por userId",
-        error,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener folders por userId",
+      error,
+    });
   }
 };
 
@@ -29,13 +27,11 @@ exports.getFoldersById = async (req, res) => {
     res.status(200).json({ success: true, folder });
   } catch (error) {
     console.error("Error al obtener folders por groupId:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Error al obtener folders por groupId",
-        error,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener folders por groupId",
+      error,
+    });
   }
 };
 
@@ -63,13 +59,11 @@ exports.getFoldersByGroupId = async (req, res) => {
     res.status(200).json({ success: true, folders });
   } catch (error) {
     console.error("Error al obtener folders por groupId:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Error al obtener folders por groupId",
-        error,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener folders por groupId",
+      error,
+    });
   }
 };
 
@@ -100,6 +94,7 @@ exports.updateFolderById = async (req, res) => {
   try {
     const { id } = req.params;
     const updatedData = req.body;
+    console.log(id, updatedData);
     const updatedFolder = await Folder.findByIdAndUpdate(id, updatedData, {
       new: true,
     });
@@ -115,12 +110,10 @@ exports.updateFolderById = async (req, res) => {
     });
   } catch (error) {
     console.error("Error al actualizar el folder:", error);
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Error al actualizar el folder",
-        error,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Error al actualizar el folder",
+      error,
+    });
   }
 };

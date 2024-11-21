@@ -1,55 +1,65 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
-const PreFolderSchema = new Schema({
-  initialDatePreFolder: {
-    type: String,
-    required: false,
+const PreFolderSchema = new Schema(
+  {
+    initialDatePreFolder: {
+      type: String,
+      required: false,
+    },
+    finalDatePreFolder: {
+      type: String,
+      required: false,
+    },
+    memberPreFolder: {
+      type: String,
+      required: false,
+    },
+    amountPreFolder: {
+      type: Number,
+      required: false,
+    },
+    statusPreFolder: {
+      type: String,
+      required: false,
+    },
+    descriptionPreFolder: {
+      type: String,
+      required: false,
+    },
   },
-  finalDatePreFolder: {
-    type: String,
-    required: false,
-  },
-  memberPreFolder: {
-    type: String,
-    required: false,
-  },
-  amountPreFolder: {
-    type: Number,
-    required: false,
-  },
-  statusPreFolder: {
-    type: String,
-    required: false,
-  },
-  descriptionPreFolder: {
-    type: String,
-    required: false,
-  },
-});
+  {
+    timestamps: true,
+  }
+);
 
-const JudFolderSchema = new Schema({
-  initialDateJudFolder: {
-    type: String,
-    required: false,
+const JudFolderSchema = new Schema(
+  {
+    initialDateJudFolder: {
+      type: String,
+      required: false,
+    },
+    finalDateJudFolder: {
+      type: String,
+      required: false,
+    },
+    numberJudFolder: {
+      type: String,
+      required: false,
+    },
+    statusJudFolder: {
+      type: String,
+      required: false,
+    },
+    descriptionJudFolder: {
+      type: String,
+      required: false,
+    },
   },
-  finalDateJudFolder: {
-    type: String,
-    required: false,
-  },
-  numberJudFolder: {
-    type: String,
-    required: false,
-  },
-  statusJudFolder: {
-    type: String,
-    required: false,
-  },
-  descriptionJudFolder: {
-    type: String,
-    required: false,
-  },
-});
+  {
+    timestamps: true,
+  }
+);
 
 const FolderSchema = new Schema(
   {
@@ -71,7 +81,7 @@ const FolderSchema = new Schema(
     },
     status: {
       type: String,
-      enum: ["Nueva", "En Progreso", "Cerrada", "Pendiente"],
+      enum: ["Nueva", "En Proceso", "Cerrada", "Pendiente"],
       required: true,
     },
     description: {
@@ -110,10 +120,12 @@ const FolderSchema = new Schema(
     preFolder: {
       type: PreFolderSchema,
       required: false,
+      default: null,
     },
     judFolder: {
       type: JudFolderSchema,
       required: false,
+      default: null,
     },
     userId: {
       type: Schema.Types.ObjectId,
