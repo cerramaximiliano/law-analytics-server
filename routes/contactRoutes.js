@@ -24,6 +24,13 @@ router.get(
 // Ruta para eliminar un contacto por _id
 router.delete("/:id", authMiddleware, contactController.deleteContactById);
 
+router.put("/batch-update", contactController.updateMultipleContacts);
+
 router.put("/:id", authMiddleware, contactController.updateContact);
+
+router.delete(
+  "/:contactId/folders/:folderId",
+  contactController.unlinkFolderFromContact
+);
 
 module.exports = router;

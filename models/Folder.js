@@ -15,6 +15,10 @@ const PreFolderSchema = new Schema(
       type: String,
       required: false,
     },
+    numberPreFolder: {
+      type: String,
+      required: false,
+    },
     amountPreFolder: {
       type: Number,
       required: false,
@@ -48,6 +52,10 @@ const JudFolderSchema = new Schema(
       required: false,
     },
     statusJudFolder: {
+      type: String,
+      required: false,
+    },
+    amountJudFolder: {
       type: String,
       required: false,
     },

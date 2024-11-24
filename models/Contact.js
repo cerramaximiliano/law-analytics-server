@@ -13,6 +13,10 @@ const ContactSchema = new mongoose.Schema(
       ref: "UserGroup", // Si tienes un modelo de grupo de usuarios
       required: false,
     },
+    folderIds: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Folder'
+    }],
     name: {
       type: String,
       required: true,

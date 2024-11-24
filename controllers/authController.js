@@ -22,7 +22,7 @@ const verifyGoogleToken = async (token) => {
 
 const generateToken = (user) => {
   return jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
-    expiresIn: "1h",
+    expiresIn: "3h",
     algorithm: "HS256",
   });
 };
