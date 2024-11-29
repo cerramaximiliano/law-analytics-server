@@ -206,3 +206,71 @@ exports.unlinkFolderFromContact = async (req, res) => {
     });
   }
 };
+
+
+exports.linkFoldersToContact = async (req, res) => {
+  try {
+    const { contactId } = req.params;
+    const { folderIds } = req.body;
+
+    // Validar que se recibieron los datos necesarios
+    if (!contactId || !Array.isArray(folderIds) || folderIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Se requiere un contactId y un array de folderIds"
+      });
+    }
+
+    // Validar que los IDs sean válidos
+    if (!mongoose.Types.ObjectId.isValid(contactId)) {
+      return res.status(400).json({
+        success: false,
+        message: "ID de contacto inválido"
+      });
+    }
+
+    const invalidFolderIds = folderIds.filter(id => !mongoose.Types.ObjectId.isValid(id));
+    if (invalidFolderIds.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Algunos IDs de folders son inválidos",
+        invalidIds: invalidFolderIds
+      });
+    }
+
+    // Buscar el contacto y actualizar sus folderIds
+    const updatedContact = await Contact.findByIdAndUpdate(
+      contactId,
+      { 
+        $addToSet: { // Usar $addToSet para evitar duplicados
+          folderIds: { $each: folderIds }
+        }
+      },
+      { 
+        new: true, 
+        runValidators: true 
+      }
+    );
+
+    if (!updatedContact) {
+      return res.status(404).json({
+        success: false,
+        message: "Contacto no encontrado"
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Folders vinculados exitosamente",
+      contact: updatedContact
+    });
+
+  } catch (error) {
+    console.error("Error al vincular folders:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al vincular folders al contacto",
+      error: error.message
+    });
+  }
+};

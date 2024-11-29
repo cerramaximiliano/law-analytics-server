@@ -32,5 +32,8 @@ router.delete(
   "/:contactId/folders/:folderId",
   contactController.unlinkFolderFromContact
 );
+// Ruta para vincular folders a un contacto
+router.post('/:contactId/link-folders', contactController.linkFoldersToContact);
+
 
 module.exports = router;

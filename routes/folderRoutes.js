@@ -10,6 +10,7 @@ const {
   updateFolderById,
   getFoldersByUserId,
   getFoldersById,
+  getFoldersByIds,
 } = require("../controllers/folderController.js");
 
 // Ruta para buscar todos los folders por userId
@@ -29,5 +30,7 @@ router.delete("/:id", deleteFolderById);
 
 // Ruta para actualizar un folder por _id
 router.put("/:id", updateFolderById);
+
+router.post("/batch", getFoldersByIds);
 
 module.exports = router;

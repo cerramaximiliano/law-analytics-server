@@ -1,5 +1,5 @@
 // controllers/folderController.js
-
+const { default: mongoose } = require("mongoose");
 const Folder = require("../models/Folder.js");
 
 // Buscar todos los folders por userId
@@ -63,6 +63,48 @@ exports.getFoldersByGroupId = async (req, res) => {
       success: false,
       message: "Error al obtener folders por groupId",
       error,
+    });
+  }
+};
+
+exports.getFoldersByIds = async (req, res) => {
+  try {
+    const { folderIds } = req.body;
+
+    if (!Array.isArray(folderIds) || folderIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Se requiere un array de folderIds",
+      });
+    }
+
+    // Validar que todos los IDs sean válidos
+    const validIds = folderIds.filter((id) =>
+      mongoose.Types.ObjectId.isValid(id)
+    );
+
+    if (validIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No se proporcionaron IDs válidos",
+      });
+    }
+
+    // Buscar todos los folders que coincidan con los IDs
+    const folders = await Folder.find({
+      _id: { $in: validIds },
+    }).select("folderName description status"); // Seleccionar solo los campos necesarios
+
+    res.status(200).json({
+      success: true,
+      folders,
+    });
+  } catch (error) {
+    console.error("Error en getFoldersByIds:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al obtener los folders",
+      error: error.message,
     });
   }
 };
