@@ -12,6 +12,7 @@ const folderRoutes = require("./folderRoutes");
 const movementRoutes = require("./movementRoutes");
 const notificationRoutes = require("./notificationRoutes");
 const calculatorRoutes = require("./calculatorRoutes");
+const taskRoutes = require("./taskRoutes");
 
 const router = express.Router();
 
@@ -26,5 +27,6 @@ router.use("/api/events", eventRoutes);
 router.use("/api/movements", movementRoutes);
 router.use("/api/notifications", notificationRoutes);
 router.use("/api/calculators", calculatorRoutes);
+router.use("/api/tasks", taskRoutes);
 
 module.exports = router;
