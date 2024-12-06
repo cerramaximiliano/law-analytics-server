@@ -2,10 +2,13 @@ const Task = require("../models/Task");
 
 const createTask = async (req, res) => {
   try {
+    console.log(req.body);
     const task = new Task(req.body);
     await task.save();
+    console.log(task);
     res.status(201).json(task);
   } catch (error) {
+    console.log(error);
     res.status(400).json({ error: error.message });
   }
 };
@@ -64,6 +67,24 @@ const deleteTask = async (req, res) => {
   }
 };
 
+
+const toggleTaskStatus = async (req, res) => {
+  try {
+      const { id } = req.params;
+      const task = await Task.findById(id);
+      
+      if (!task) {
+          return res.status(404).json({ message: 'Tarea no encontrada' });
+      }
+
+      task.checked = !task.checked; // Toggle el valor actual
+      await task.save();
+
+      res.json(task);
+  } catch (error) {
+      res.status(500).json({ message: 'Error al actualizar el estado de la tarea' });
+  }
+};
 module.exports = {
   createTask,
   findTasksByUserId,
@@ -71,4 +92,5 @@ module.exports = {
   findTasksByFolderId,
   updateTask,
   deleteTask,
+  toggleTaskStatus
 };

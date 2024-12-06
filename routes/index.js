@@ -3,7 +3,6 @@ const express = require("express");
 
 // Importar todas las rutas
 const authRoutes = require("./authRoutes");
-const emailRoutes = require("./emailRoutes");
 const alertRoutes = require("./alertRoutes");
 const contactRoutes = require("./contactRoutes");
 const cloudinaryRoutes = require("./cloudinaryRoutes");
@@ -13,6 +12,7 @@ const movementRoutes = require("./movementRoutes");
 const notificationRoutes = require("./notificationRoutes");
 const calculatorRoutes = require("./calculatorRoutes");
 const taskRoutes = require("./taskRoutes");
+const emailRoutes = require("./emailRoutes");
 
 const router = express.Router();
 
@@ -28,5 +28,6 @@ router.use("/api/movements", movementRoutes);
 router.use("/api/notifications", notificationRoutes);
 router.use("/api/calculators", calculatorRoutes);
 router.use("/api/tasks", taskRoutes);
+router.use("/api/email", emailRoutes);
 
 module.exports = router;

@@ -128,6 +128,7 @@ exports.login = async (req, res) => {
       serviceToken: token,
     });
   } catch (error) {
+    logger.error(error)
     res.status(500).json({ message: "Server error", error });
   }
 };

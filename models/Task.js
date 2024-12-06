@@ -2,15 +2,16 @@ const mongoose = require("mongoose");
 
 const taskSchema = new mongoose.Schema({
   name: { type: String, required: true },
-  progress: Number,
-  done: Number,
+  progress: { type: Number },
+  done: { type: Number },
   checked: { type: Boolean, required: true },
   date: { type: String, required: true },
-  folderId: String,
+  folderId: { type: String },
   userId: { type: String, required: true },
-  groupId: String,
+  groupId: { type: String },
+  description: { type: String },
 });
 
-const Task = mongoose.model("Task", taskSchema);
+const Task = mongoose.model("TaskApp", taskSchema);
 
 module.exports = Task;

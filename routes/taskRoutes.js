@@ -6,6 +6,7 @@ const {
   findTasksByFolderId,
   updateTask,
   deleteTask,
+  toggleTaskStatus,
 } = require("../controllers/taskController");
 
 router.post("/", createTask);
@@ -14,5 +15,6 @@ router.get("/group/:groupId", findTasksByGroupId);
 router.get("/folder/:folderId", findTasksByFolderId);
 router.put("/:_id", updateTask);
 router.delete("/:_id", deleteTask);
+router.put("/:id/toggle", toggleTaskStatus);
 
 module.exports = router;
