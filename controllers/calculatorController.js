@@ -41,7 +41,7 @@ const getCalculatorsByFolderId = async (req, res) => {
 const getCalculatorsByUserIdTypeClass = async (req, res) => {
   try {
     const { userId, groupId, folderId, type, classType } = req.query;
-    console.log(userId, groupId, folderId, type, classType);
+
     if (!folderId && !userId && !groupId) {
       return res.status(400).json({
         success: false,
@@ -55,7 +55,7 @@ const getCalculatorsByUserIdTypeClass = async (req, res) => {
     if (classType) filter.classType = classType;
     if (userId) filter.userId = userId;
     if (groupId) filter.groupId = groupId;
-    console.log(filter);
+
     const calculators = await Calculator.find(filter);
     if (!calculators.length) {
       return res.status(404).json({
