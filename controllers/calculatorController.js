@@ -58,8 +58,9 @@ const getCalculatorsByUserIdTypeClass = async (req, res) => {
 
     const calculators = await Calculator.find(filter);
     if (!calculators.length) {
-      return res.status(404).json({
-        success: false,
+      return res.status(200).json({
+        calculators: [],
+        success: true,
         message: "No se encontraron resultados con los filtros proporcionados.",
       });
     }
