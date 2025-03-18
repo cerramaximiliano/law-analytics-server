@@ -21,6 +21,11 @@ const verifyGoogleToken = async (token) => {
 };
 
 const generateToken = (user) => {
+  if (!process.env.JWT_SECRET) {
+    logger.error("JWT_SECRET no está definido en las variables de entorno");
+    throw new Error("No se puede generar el token: clave secreta no configurada");
+  }
+  
   return jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
     expiresIn: "3h",
     algorithm: "HS256",
