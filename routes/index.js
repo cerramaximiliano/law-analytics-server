@@ -13,6 +13,7 @@ const notificationRoutes = require("./notificationRoutes");
 const calculatorRoutes = require("./calculatorRoutes");
 const taskRoutes = require("./taskRoutes");
 const emailRoutes = require("./emailRoutes");
+const tasasRoutes = require("./tasasRoutes")
 
 const router = express.Router();
 
@@ -29,5 +30,6 @@ router.use("/api/notifications", notificationRoutes);
 router.use("/api/calculators", calculatorRoutes);
 router.use("/api/tasks", taskRoutes);
 router.use("/api/email", emailRoutes);
+router.use("/api/tasas", tasasRoutes);
 
 module.exports = router;

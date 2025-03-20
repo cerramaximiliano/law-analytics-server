@@ -15,7 +15,7 @@ const calculatorSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Group",
     },
-    folderId: { type: mongoose.Schema.Types.ObjectId, ref: "Folder" },
+    folderId: { type: mongoose.Schema.Types.ObjectId, ref: "Folder", default: null },
     folderName: { type: String },
     type: {
       type: String,

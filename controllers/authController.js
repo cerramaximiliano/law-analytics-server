@@ -15,7 +15,7 @@ const verifyGoogleToken = async (token) => {
     const payload = ticket.getPayload();
     return payload;
   } catch (error) {
-    console.error("Error al verificar el token de Google:", error);
+    logger.error("Error al verificar el token de Google:", error);
     return null;
   }
 };
@@ -96,7 +96,7 @@ exports.register = async (req, res) => {
       needsVerification: true,
     });
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     res.status(500).json({ message: "Server error", error });
   }
 };
@@ -128,6 +128,31 @@ exports.login = async (req, res) => {
 
     const token = generateToken(user);
 
+
+    // Configuración de cookie flexible
+    const isLocalDevelopment = req.headers.origin?.includes('localhost') || 
+                              req.headers.origin?.includes('127.0.0.1');
+    
+    const cookieOptions = {
+      maxAge: 3 * 60 * 60 * 1000,
+      httpOnly: true,
+      path: '/',
+    };
+    
+    if (isLocalDevelopment) {
+      // Configuración para desarrollo local
+      cookieOptions.secure = false;
+      cookieOptions.sameSite = 'lax';
+    } else {
+      // Configuración para entornos de producción
+      cookieOptions.secure = true;
+      cookieOptions.sameSite = 'none';
+    }
+    
+    res.cookie('access_token', token, cookieOptions);
+
+
+    // También enviar el token en la respuesta JSON para compatibilidad con el código existente
     res.json({
       user: filterUserData({ ...user.toObject(), ...updatedData }),
       serviceToken: token,
@@ -178,7 +203,7 @@ exports.verifyCode = async (req, res) => {
       .status(200)
       .json({ message: "Cuenta verificada con éxito.", success: true });
   } catch (error) {
-    console.log(error);
+    logger.error(error);
     res.status(500).json({ message: "Error del servidor", error });
   }
 };
@@ -210,13 +235,38 @@ exports.googleAuth = async (req, res) => {
 
     const jwt = generateToken(user);
 
+
+
+    // Configuración de cookie flexible
+    const isLocalDevelopment = req.headers.origin?.includes('localhost') || 
+                              req.headers.origin?.includes('127.0.0.1');
+    
+    const cookieOptions = {
+      maxAge: 3 * 60 * 60 * 1000,
+      httpOnly: true,
+      path: '/',
+    };
+    
+    if (isLocalDevelopment) {
+      // Configuración para desarrollo local
+      cookieOptions.secure = false;
+      cookieOptions.sameSite = 'lax';
+    } else {
+      // Configuración para entornos de producción
+      cookieOptions.secure = true;
+      cookieOptions.sameSite = 'none';
+    }
+    
+    res.cookie('access_token', jwt, cookieOptions);
+
+    
     res.json({
       success: true,
       serviceToken: jwt,
       user: filterUserData(user),
     });
   } catch (error) {
-    console.error("Error en autenticación:", error);
+    logger.error("Error en autenticación:", error);
     res
       .status(500)
       .json({ success: false, message: "Error en la autenticación" });
