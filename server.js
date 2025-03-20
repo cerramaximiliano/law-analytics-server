@@ -19,9 +19,8 @@ process.on('uncaughtException', (error) => {
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, async () => {
     try {
-        logger.info(`Server running on port ${PORT}`)
+        logger.info(`Server running on port ${PORT} - on ${process.env.NODE_ENV}`)
     } catch (error) {
-        console.log(error)
         logger.error(`Error ${error}`)
     }
 });

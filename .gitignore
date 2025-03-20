@@ -123,4 +123,4 @@ out/
 coverage/
 
 # Azure Pipelines
-*.config.js
+#*.config.js
