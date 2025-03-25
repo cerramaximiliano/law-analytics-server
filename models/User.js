@@ -29,6 +29,10 @@ const UserSchema = new mongoose.Schema(
     url: { type: String },
     zipCode: { type: String },
 
+    // Contador de cálculos activos
+    activeCalculatorsCount: { type: Number, default: 0 },
+    activeFoldersCount: { type: Number, default: 0 },
+      
     // Subdocumento de usuarios según la definición de User
     users: [
       {

@@ -1,4 +1,5 @@
 const Calculator = require("../models/Calculator");
+const statsService = require("../services/statsService")
 
 const createCalculator = async (req, res) => {
   try {
@@ -7,6 +8,12 @@ const createCalculator = async (req, res) => {
       req.body.folderId = null;
     }
     const calculator = await Calculator.create(req.body);
+
+    // Actualizar el contador de estadísticas
+    if (req.body.userId) {
+      await statsService.updateEntityCount(req.body.userId, 'calculators', 1);
+    }
+
     res.status(201).json({ success: true, calculator });
   } catch (error) {
     res.status(400).json({ success: false, message: `Ha ocurrido un error en el servidor. Intente nuevamente más tarde`, error: error.message });
@@ -94,6 +101,9 @@ const deleteCalculator = async (req, res) => {
   try {
     const calculator = await Calculator.findByIdAndDelete(req.params.id);
     if (!calculator) throw new Error("Calculator not found");
+    if (calculator.userId) {
+      await statsService.updateEntityCount(calculator.userId, 'calculators', -1);
+    }
     res.json({ success: true });
   } catch (error) {
     res.status(400).json({ success: false, message: `Ha ocurrido un error en el servidor. Intente nuevamente más tarde`, error: error.message });

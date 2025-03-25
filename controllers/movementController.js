@@ -1,5 +1,6 @@
 const { mongoose } = require("mongoose");
 const Movement = require("../models/Movements");
+const statsService = require("../services/statsService");
 
 exports.createMovement = async (req, res) => {
   try {
@@ -25,6 +26,9 @@ exports.createMovement = async (req, res) => {
 
     const newMovement = new Movement(movementData);
     const savedMovement = await newMovement.save();
+
+    // Incrementar el contador de movements en las estadísticas
+    await statsService.updateEntityCount(movementData.userId, 'movements', 1);
 
     res.status(201).json({
       success: true,
@@ -74,7 +78,20 @@ exports.updateMovement = async (req, res) => {
         success: false,
         message: "Movimiento no encontrado",
       });
+    };
+
+    // Verificar si está cambiando el userId
+    const isChangingUser = updateData.userId &&
+      updateData.userId !== currentMovement.userId.toString();
+
+    if (isChangingUser) {
+      // Decrementar contador del usuario original
+      await statsService.updateEntityCount(currentMovement.userId, 'movements', -1);
+
+      // Incrementar contador del nuevo usuario
+      await statsService.updateEntityCount(updateData.userId, 'movements', 1);
     }
+
 
     res.status(200).json({
       success: true,
@@ -95,15 +112,26 @@ exports.updateMovement = async (req, res) => {
 exports.deleteMovement = async (req, res) => {
   try {
     const { id } = req.params;
-    const deletedMovement = await Movement.findByIdAndDelete(id);
-
-    if (!deletedMovement) {
+    
+    // Obtener el movimiento antes de eliminarlo para capturar el userId
+    const movementToDelete = await Movement.findById(id);
+    
+    if (!movementToDelete) {
       return res.status(404).json({
         success: false,
         message: "Movimiento no encontrado",
       });
     }
-
+    
+    // Guardar el userId antes de eliminar
+    const userId = movementToDelete.userId;
+    
+    // Eliminar el movimiento
+    const deletedMovement = await Movement.findByIdAndDelete(id);
+    
+    // Decrementar el contador de movements en las estadísticas
+    await statsService.updateEntityCount(userId, 'movements', -1);
+    
     res.status(200).json({
       success: true,
       message: "Movimiento eliminado exitosamente",

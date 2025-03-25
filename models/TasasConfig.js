@@ -19,6 +19,12 @@ let tasasConfigSchema = new Schema({
   fechasFaltantes: [{
     type: Date
   }],
+  tipoIndice: {
+    type: String,
+    required: true,
+    enum: ['indexado', 'interesDiario'],
+    default: 'interesDiario'
+  },
   ultimaVerificacion: {
     type: Date,
     default: Date.now

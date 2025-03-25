@@ -14,8 +14,20 @@ const calculatorRoutes = require("./calculatorRoutes");
 const taskRoutes = require("./taskRoutes");
 const emailRoutes = require("./emailRoutes");
 const tasasRoutes = require("./tasasRoutes")
+const analysisRoutes = require('./statsAnalysisRoutes');
+const supportRoutes = require('./supportRoutes.js');
 
 const router = express.Router();
+
+// Configurar una ruta base para verificar que la API está funcionando
+router.get('/api/', (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    message: 'API lawanalytics server funcionando correctamente',
+    apiVersion: '1.0.0',
+    timestamp: new Date().toISOString()
+  });
+});
 
 // Configurar las rutas
 router.use("/api/auth", authRoutes);
@@ -31,5 +43,8 @@ router.use("/api/calculators", calculatorRoutes);
 router.use("/api/tasks", taskRoutes);
 router.use("/api/email", emailRoutes);
 router.use("/api/tasas", tasasRoutes);
+router.use('/api/stats', analysisRoutes);
+router.use('/api/support-contacts', supportRoutes);
+
 
 module.exports = router;

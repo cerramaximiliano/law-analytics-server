@@ -4,7 +4,26 @@ const logger = require("../utils/logger");
 const { sendEmail } = require("../services/emailService");
 const { OAuth2Client } = require("google-auth-library");
 const UserAlertStatus = require("../models/UserAlertStatus");
+const tokenService = require("../services/tokenService");
+const RefreshToken = require("../models/RefreshToken");
+
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+const TOKEN_COOKIE_NAME = 'auth_token';
+const REFRESH_TOKEN_COOKIE_NAME = 'refresh_token';
+
+const getCookieConfig = (req) => {
+  const isLocalDevelopment = req.headers.origin?.includes('localhost') ||
+    req.headers.origin?.includes('127.0.0.1');
+
+  return {
+    maxAge: 3 * 60 * 60 * 1000, // 3 horas
+    httpOnly: true,
+    path: '/',
+    secure: !isLocalDevelopment,
+    sameSite: isLocalDevelopment ? 'lax' : 'none'
+  };
+};
 
 const verifyGoogleToken = async (token) => {
   try {
@@ -25,7 +44,7 @@ const generateToken = (user) => {
     logger.error("JWT_SECRET no está definido en las variables de entorno");
     throw new Error("No se puede generar el token: clave secreta no configurada");
   }
-  
+
   return jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
     expiresIn: "3h",
     algorithm: "HS256",
@@ -90,14 +109,16 @@ exports.register = async (req, res) => {
 
     const token = generateToken(user);
 
+    res.cookie(TOKEN_COOKIE_NAME, token, getCookieConfig(req));
+
     res.status(201).json({
       user: filterUserData(user),
-      serviceToken: token,
+      token: token,
       needsVerification: true,
     });
   } catch (error) {
     logger.error(error);
-    res.status(500).json({ message: "Server error", error });
+    res.status(500).json({ message: "Error del servidor, intente más tarde" });
   }
 };
 
@@ -107,7 +128,11 @@ exports.login = async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user || !(await user.comparePassword(password))) {
-      return res.status(401).json({ message: "Email y/o password inválidos" });
+      // Cambiar a 403 Forbidden para indicar credenciales inválidas
+      return res.status(403).json({
+        message: "Credenciales inválidas",
+        loginFailed: true  // Añadir bandera para manejar en el cliente
+      });
     }
 
     let updatedData = {};
@@ -126,49 +151,55 @@ exports.login = async (req, res) => {
       );
     }
 
-    const token = generateToken(user);
-
+    const accessToken = tokenService.generateAccessToken(user);
+    const refreshToken = await tokenService.generateRefreshToken(user);
 
     // Configuración de cookie flexible
-    const isLocalDevelopment = req.headers.origin?.includes('localhost') || 
-                              req.headers.origin?.includes('127.0.0.1');
-    
-    const cookieOptions = {
-      maxAge: 3 * 60 * 60 * 1000,
+    const isLocalDevelopment = req.headers.origin?.includes('localhost') ||
+      req.headers.origin?.includes('127.0.0.1');
+
+    res.cookie(TOKEN_COOKIE_NAME, accessToken, {
       httpOnly: true,
-      path: '/',
-    };
-    
-    if (isLocalDevelopment) {
-      // Configuración para desarrollo local
-      cookieOptions.secure = false;
-      cookieOptions.sameSite = 'lax';
-    } else {
-      // Configuración para entornos de producción
-      cookieOptions.secure = true;
-      cookieOptions.sameSite = 'none';
-    }
-    
-    res.cookie('access_token', token, cookieOptions);
+      secure: !isLocalDevelopment,
+      sameSite: isLocalDevelopment ? 'lax' : 'none',
+      maxAge: 10 * 60 * 1000 // 30 minutos
+    });
 
+    res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
+      httpOnly: true,
+      secure: !isLocalDevelopment,
+      sameSite: isLocalDevelopment ? 'lax' : 'none',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 días
+    });
 
-    // También enviar el token en la respuesta JSON para compatibilidad con el código existente
-    res.json({
+    // Enviar respuesta con código 200
+    res.status(200).json({
       user: filterUserData({ ...user.toObject(), ...updatedData }),
-      serviceToken: token,
+      accessToken,
+      refreshToken,
+      message: "Inicio de sesión exitoso"
     });
   } catch (error) {
-    logger.error(error)
-    res.status(500).json({ message: "Server error", error });
+    logger.error(error);
+    res.status(500).json({
+      message: "Error del servidor, intente más tarde",
+      serverError: true
+    });
   }
 };
 
 exports.getProfile = async (req, res) => {
+
   try {
     const user = await User.findById(req.user.id).select("-password");
+    if (!user) {
+      logger.error(`Error al obtener perfil. Usuario no encontrado.`)
+      return res.status(404).json({ message: "Usuario no encontrado" });
+    }
     res.json({ user: filterUserData(user) });
   } catch (error) {
-    res.status(500).json({ message: "Server error", error });
+    logger.error("Error al obtener perfil:", error);
+    res.status(500).json({ message: "Error al obtener el perfil. Intente nuevamente más tarde." });
   }
 };
 
@@ -203,8 +234,8 @@ exports.verifyCode = async (req, res) => {
       .status(200)
       .json({ message: "Cuenta verificada con éxito.", success: true });
   } catch (error) {
-    logger.error(error);
-    res.status(500).json({ message: "Error del servidor", error });
+    logger.error("Error en verificación de código:", error);
+    res.status(500).json({ message: "Error al verificar el código. Intente nuevamente más tarde." });
   }
 };
 
@@ -233,36 +264,34 @@ exports.googleAuth = async (req, res) => {
       setDefaultsOnInsert: true,
     });
 
-    const jwt = generateToken(user);
+    const accessToken = tokenService.generateAccessToken(user);
+    const refreshToken = await tokenService.generateRefreshToken(user);
+
+    const isLocalDevelopment = req.headers.origin?.includes('localhost') ||
+      req.headers.origin?.includes('127.0.0.1');
 
 
-
-    // Configuración de cookie flexible
-    const isLocalDevelopment = req.headers.origin?.includes('localhost') || 
-                              req.headers.origin?.includes('127.0.0.1');
-    
-    const cookieOptions = {
-      maxAge: 3 * 60 * 60 * 1000,
+    res.cookie(TOKEN_COOKIE_NAME, accessToken, {
       httpOnly: true,
-      path: '/',
-    };
-    
-    if (isLocalDevelopment) {
-      // Configuración para desarrollo local
-      cookieOptions.secure = false;
-      cookieOptions.sameSite = 'lax';
-    } else {
-      // Configuración para entornos de producción
-      cookieOptions.secure = true;
-      cookieOptions.sameSite = 'none';
-    }
-    
-    res.cookie('access_token', jwt, cookieOptions);
+      secure: !isLocalDevelopment,
+      sameSite: isLocalDevelopment ? 'lax' : 'none',
+      maxAge: 10 * 60 * 1000 // 10 minutos
+    });
 
-    
+    // Configurar cookie de refresh token
+    res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
+      httpOnly: true,
+      secure: !isLocalDevelopment,
+      sameSite: isLocalDevelopment ? 'lax' : 'none',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 días
+    });
+
+
+
     res.json({
       success: true,
-      serviceToken: jwt,
+      accessToken,
+      refreshToken,
       user: filterUserData(user),
     });
   } catch (error) {
@@ -270,5 +299,65 @@ exports.googleAuth = async (req, res) => {
     res
       .status(500)
       .json({ success: false, message: "Error en la autenticación" });
+  }
+};
+
+
+exports.refreshTokens = async (req, res) => {
+  try {
+    // Obtener token de refresco de la cookie
+    const refreshToken = req.cookies.refresh_token;
+    logger.info("Refresh token recibido", refreshToken)
+    if (!refreshToken) {
+      return res.status(403).json({
+        message: "No se encontró token de refresco",
+        requireLogin: true  // Indica que necesita inicio de sesión
+      });
+    }
+
+    try {
+      const tokens = await tokenService.refreshTokens(refreshToken, req, res);
+
+      res.status(200).json({
+        message: "Tokens actualizados exitosamente",
+        success: true
+      });
+    } catch (refreshError) {
+      logger.error("Error refresh token", refreshError)
+      return res.status(403).json({
+        message: refreshError.message,
+        requireLogin: true  // Indica que necesita inicio de sesión
+      });
+    }
+
+  } catch (error) {
+    logger.error("Error en refresh de tokens:", error);
+    res.status(500).json({
+      message: "Error interno al renovar tokens",
+      needRefresh: true
+    });
+  }
+};
+
+exports.logout = async (req, res) => {
+  try {
+    // Obtener token de refresco de la cookie
+    const refreshToken = req.cookies.refresh_token;
+    if (refreshToken) {
+      // Invalidar token de refresco en base de datos
+      await RefreshToken.findOneAndUpdate(
+        { token: refreshToken },
+        { isActive: false, revokedAt: new Date() }
+      );
+    }
+
+    // Limpiar cookies
+    res.clearCookie(TOKEN_COOKIE_NAME);
+    res.clearCookie(REFRESH_TOKEN_COOKIE_NAME);
+
+    res.json({ message: "Sesión cerrada exitosamente" });
+  } catch (error) {
+    logger.error(`Error en ruta /logout: ${error}`)
+    res.status(500).json({ message: "Error al cerrar sesión" });
   }
 };

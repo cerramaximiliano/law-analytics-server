@@ -6,6 +6,7 @@ const fileUpload = require("express-fileupload");
 const dotenv = require('dotenv');
 const retrieveSecrets = require('./config/env');
 const fs = require('fs/promises');
+const cookieParser = require('cookie-parser');
 
 // Primero creamos la app express
 const app = express();
@@ -45,7 +46,7 @@ app.use((req, res, next) => {
   next();
 });
 
-
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(fileUpload({ useTempFiles: true, tempFileDir: "/tmp/" }));
@@ -65,23 +66,26 @@ app.get("/", (req, res) => {
 
 
 // Inicialización asíncrona con secretos
-retrieveSecrets()
-  .then(secretsString => {
-    return fs.writeFile(".env", secretsString);
-  })
-  .then(() => {
+// Inicialización asíncrona de la aplicación
+const initializeApp = async () => {
+  try {
+    // Obtener y escribir secretos
+    const secretsString = await retrieveSecrets();
+    await fs.writeFile(".env", secretsString);
+    
+    // Cargar variables de entorno
     dotenv.config();
-
+    
     // Ahora importamos las cosas que dependen de variables de entorno
     const connectDB = require("./utils/db");
     const routes = require("./routes");
-
+    
     // Conectar a la base de datos
     connectDB();
-
+    
     // Configurar rutas
     app.use(routes);
-
+    
     // Middleware para rutas no encontradas (404)
     app.use((req, res, next) => {
       logger.warn(`Ruta no encontrada: ${req.method} ${req.url}`);
@@ -90,24 +94,28 @@ retrieveSecrets()
         error: 'Ruta no encontrada'
       });
     });
-
-
+    
     // Middleware de manejo de errores generales
     app.use((err, req, res, next) => {
       logger.error(`Error en la solicitud ${req.method} ${req.url}: ${err.message}`);
       logger.error(err.stack);
-
+      
       res.status(err.statusCode || 500).json({
         success: false,
         error: err.message || 'Error del servidor'
       });
     });
-
+    
     logger.info("Configuración asíncrona completada correctamente");
-  })
-  .catch(err => {
+  } catch (err) {
     console.error("Error configurando secretos:", err);
     logger.error(`Error configurando la aplicación: ${err.message}`);
-  });
+    process.exit(1); // Terminar la aplicación si la inicialización falla
+  }
+};
+
+// Ejecutar la inicialización
+initializeApp();
+
 
 module.exports = app;

@@ -1,0 +1,199 @@
+erDiagram
+    Usuarios ||--o{ Calculator : "tiene"
+    Usuarios ||--o{ Folder : "tiene"
+    Usuarios ||--o{ Movement : "tiene"
+    Usuarios ||--o{ Contact : "tiene"
+    Usuarios ||--o{ Event : "tiene"
+    Usuarios ||--o{ Notification : "tiene"
+    Usuarios ||--o{ TaskApp : "tiene"
+    Usuarios ||--o{ UserAlertStatus : "tiene"
+    Usuarios ||--|| UserStats : "tiene"
+    
+    UserGroup ||--o{ Calculator : "contiene"
+    UserGroup ||--o{ Folder : "contiene"
+    UserGroup ||--o{ Movement : "contiene"
+    UserGroup ||--o{ Contact : "contiene"
+    UserGroup ||--o{ Event : "contiene"
+    
+    Folder ||--o{ Movement : "contiene"
+    Folder ||--o{ Notification : "contiene"
+    Folder ||--o{ TaskApp : "contiene"
+    Folder ||--o{ Calculator : "contiene"
+    
+    Contact }o--o{ Folder : "asociado a"
+    
+    Alert ||--o{ UserAlertStatus : "notifica a"
+    
+    Usuarios {
+        ObjectId _id
+        String email
+        String password
+        String name
+        String firstName
+        String lastName
+        String verificationCode
+        Boolean isVerified
+        String picture
+        String address
+        String address1
+        String avatar
+        String contact
+        String country
+        String designation
+        Date dob
+        String note
+        String role
+        String[] skill
+        String state
+        String subscription
+        String tier
+        String url
+        String zipCode
+        Number activeCalculatorsCount
+        Number activeFoldersCount
+        EmbeddedDocument[] users
+    }
+    
+    UserStats {
+        ObjectId _id
+        ObjectId userId
+        Object counts
+        Date lastUpdated
+    }
+    
+    Calculator {
+        ObjectId _id
+        ObjectId userId
+        String date
+        ObjectId groupId
+        ObjectId folderId
+        String folderName
+        String type
+        String classType
+        String subClassType
+        Number amount
+        String user
+        Number interest
+        Object variables
+    }
+    
+    Folder {
+        ObjectId _id
+        String folderId
+        String folderName
+        String materia
+        String orderStatus
+        String status
+        String description
+        String initialDateFolder
+        String finalDateFolder
+        Number amount
+        Object folderJuris
+        String folderFuero
+        EmbeddedDocument preFolder
+        EmbeddedDocument judFolder
+        ObjectId userId
+        ObjectId groupId
+        String situationFolder
+    }
+    
+    Movement {
+        ObjectId _id
+        ObjectId userId
+        ObjectId groupId
+        ObjectId folderId
+        String time
+        String dateExpiration
+        String movement
+        String title
+        String description
+        String link
+    }
+    
+    Contact {
+        ObjectId _id
+        ObjectId userId
+        ObjectId groupId
+        ObjectId[] folderIds
+        String name
+        String lastName
+        String role
+        String type
+        String address
+        String state
+        String city
+        String zipCode
+        String email
+        String phone
+        String nationality
+        String document
+        String cuit
+        String status
+        String activity
+        String company
+        String fiscal
+    }
+    
+    Event {
+        ObjectId _id
+        Boolean allDay
+        String color
+        String description
+        Date start
+        Date end
+        String type
+        String title
+        String folderId
+        ObjectId userId
+        ObjectId groupId
+    }
+    
+    Notification {
+        ObjectId _id
+        ObjectId userId
+        ObjectId folderId
+        ObjectId groupId
+        String time
+        String dateExpiration
+        String title
+        String code
+        String idCode
+        String user
+        String notification
+        String description
+    }
+    
+    TaskApp {
+        ObjectId _id
+        String name
+        Number progress
+        Number done
+        Boolean checked
+        String date
+        String folderId
+        String userId
+        String groupId
+        String description
+    }
+    
+    UserAlertStatus {
+        ObjectId _id
+        ObjectId userId
+        ObjectId alertId
+        Boolean isRead
+        String color
+        Date viewedAt
+        Date createdAt
+    }
+    
+    Alert {
+        ObjectId _id
+        String title
+        String description
+    }
+    
+    UserGroup {
+        ObjectId _id
+        String name
+        String description
+    }

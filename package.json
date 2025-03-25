@@ -11,10 +11,11 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.758.0",
     "@aws-sdk/client-ses": "^3.686.0",
-    "aws-sdk": "^2.1692.0",
     "bcrypt": "^5.1.1",
     "cloudinary": "^2.5.1",
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",

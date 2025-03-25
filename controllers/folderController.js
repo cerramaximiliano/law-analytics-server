@@ -1,6 +1,7 @@
 // controllers/folderController.js
 const { default: mongoose } = require("mongoose");
 const Folder = require("../models/Folder.js");
+const statsService = require('../services/statsService');
 
 // Buscar todos los folders por userId
 exports.getFoldersByUserId = async (req, res) => {
@@ -39,8 +40,11 @@ exports.getFoldersById = async (req, res) => {
 exports.createFolder = async (req, res) => {
   try {
     const folderData = req.body;
-    console.log(folderData);
     const newFolder = await Folder.create(folderData);
+
+    if (folderData.userId) {
+      await statsService.updateEntityCount(folderData.userId, 'folders', 1);
+    }
 
     res.status(201).json({ success: true, folder: newFolder });
   } catch (error) {
@@ -113,21 +117,36 @@ exports.getFoldersByIds = async (req, res) => {
 exports.deleteFolderById = async (req, res) => {
   try {
     const { id } = req.params;
-    const deletedFolder = await Folder.findByIdAndDelete(id);
-    if (!deletedFolder) {
-      return res
-        .status(404)
-        .json({ success: false, message: "Folder no encontrado" });
+    const folderToDelete = await Folder.findById(id);
+
+    if (!folderToDelete) {
+      return res.status(404).json({
+        success: false,
+        message: "Folder no encontrado"
+      });
     }
+
+    // Guardar el userId antes de eliminar
+    const userId = folderToDelete.userId;
+
+    const deletedFolder = await Folder.findByIdAndDelete(id);
+
+    // Decrementar el contador de folders
+    if (userId) {
+      await statsService.updateEntityCount(userId, 'folders', -1);
+    }
+
     res.status(200).json({
       success: true,
       folder: deletedFolder,
     });
   } catch (error) {
     console.error("Error al eliminar el folder:", error);
-    res
-      .status(500)
-      .json({ success: false, message: "Error al eliminar el folder", error });
+    res.status(500).json({
+      success: false,
+      message: "Error al eliminar el folder",
+      error
+    });
   }
 };
 
