@@ -32,7 +32,10 @@ const UserSchema = new mongoose.Schema(
     // Contador de cálculos activos
     activeCalculatorsCount: { type: Number, default: 0 },
     activeFoldersCount: { type: Number, default: 0 },
-      
+
+    // Puntaje de completitud del perfil (0-100)
+    profileCompletionScore: { type: Number, default: 0 },
+
     // Subdocumento de usuarios según la definición de User
     users: [
       {
@@ -44,6 +47,13 @@ const UserSchema = new mongoose.Schema(
         avatar: { type: String },
       },
     ],
+
+
+    resetPasswordExpires: {
+      type: Date,
+      default: null
+    },
+
   },
   { timestamps: true }
 );
@@ -55,9 +65,60 @@ UserSchema.pre("save", async function (next) {
   next();
 });
 
+// Middleware para calcular el puntaje de completitud antes de guardar
+UserSchema.pre("save", function (next) {
+  this.profileCompletionScore = calculateCompletionScore(this);
+  next();
+});
+
 // Método para comparar contraseñas
 UserSchema.methods.comparePassword = async function (candidatePassword) {
   return bcrypt.compare(candidatePassword, this.password);
 };
+
+// Función para calcular el puntaje de completitud del perfil
+function calculateCompletionScore(user) {
+  const fieldsToCheck = [
+    { field: 'firstName', weight: 10 },
+    { field: 'lastName', weight: 10 },
+    { field: 'email', weight: 15 },
+    { field: 'avatar', weight: 5 },
+    { field: 'contact', weight: 10 },
+    { field: 'address', weight: 10 },
+    { field: 'country', weight: 5 },
+    { field: 'state', weight: 5 },
+    { field: 'zipCode', weight: 5 },
+    { field: 'designation', weight: 5 },
+    { field: 'dob', weight: 5 },
+    { field: 'note', weight: 5 },
+    { field: 'skill', weight: 10 } // Para arrays, verificamos si tiene elementos
+  ];
+
+  let totalScore = 0;
+
+  fieldsToCheck.forEach(item => {
+    const fieldValue = user[item.field];
+    if (fieldValue) {
+      if (Array.isArray(fieldValue)) {
+        // Si es un array, verificamos que tenga al menos un elemento
+        if (fieldValue.length > 0) {
+          totalScore += item.weight;
+        }
+      } else {
+        // Para campos regulares, verificamos que no estén vacíos
+        if (typeof fieldValue === 'string' && fieldValue.trim() !== '') {
+          totalScore += item.weight;
+        } else if (fieldValue instanceof Date || typeof fieldValue === 'number' || typeof fieldValue === 'boolean') {
+          totalScore += item.weight;
+        }
+      }
+    }
+  });
+
+  return Math.min(100, totalScore); // Aseguramos que no exceda 100
+}
+
+// Añadimos la función como método estático para poder usarla en el controlador
+UserSchema.statics.calculateCompletionScore = calculateCompletionScore;
 
 module.exports = mongoose.model("Usuarios", UserSchema);

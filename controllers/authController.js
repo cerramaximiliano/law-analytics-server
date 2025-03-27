@@ -6,6 +6,8 @@ const { OAuth2Client } = require("google-auth-library");
 const UserAlertStatus = require("../models/UserAlertStatus");
 const tokenService = require("../services/tokenService");
 const RefreshToken = require("../models/RefreshToken");
+const bcrypt = require("bcrypt");
+
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -66,6 +68,7 @@ const filterUserData = (user) => {
     avatar: user.avatar,
     contact: user.contact,
     country: user.country,
+    profileCompletionScore: user.profileCompletionScore,
     designation: user.designation,
     dob: user.dob,
     note: user.note,
@@ -88,7 +91,17 @@ exports.register = async (req, res) => {
       return res.status(400).json({
         message: "El usuario ya existe. Resetee el password si no lo recuerda.",
       });
-    }
+    };
+
+    // Descomentar cuando se implemente en el cliente
+    //const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+    /*     if (!passwordRegex.test(password)) {
+          return res.status(400).json({
+            success: false,
+            message: 'La contraseña debe tener al menos 8 caracteres, incluir una letra mayúscula, una minúscula, un número y un carácter especial'
+          });
+        } */
 
     const user = new User({
       email,
@@ -220,7 +233,7 @@ exports.verifyCode = async (req, res) => {
     }
 
     user.isVerified = true;
-    user.verificationCode = null;
+
     await user.save();
 
     const userAlertStatus = new UserAlertStatus({
@@ -359,5 +372,318 @@ exports.logout = async (req, res) => {
   } catch (error) {
     logger.error(`Error en ruta /logout: ${error}`)
     res.status(500).json({ message: "Error al cerrar sesión" });
+  }
+};
+
+exports.updateUserProfile = async (req, res) => {
+  try {
+    const userId = req.user._id; // Asume que el middleware de autenticación añade el usuario a req
+
+    // Campos que se pueden actualizar
+    const allowedFields = [
+      'firstName', 'lastName', 'name', 'avatar', 'contact',
+      'address', 'address1', 'country', 'state', 'zipCode',
+      'designation', 'dob', 'note', 'skill', 'url'
+    ];
+
+    // Filtra solo los campos permitidos del request
+    const updateData = {};
+    Object.keys(req.body).forEach(key => {
+      if (allowedFields.includes(key)) {
+        updateData[key] = req.body[key];
+      }
+    });
+    // Buscar el usuario actual para verificar cambios
+    const currentUser = await User.findById(userId);
+    if (!currentUser) {
+      return res.status(404).json({
+        success: false,
+        message: "Usuario no encontrado"
+      });
+    }
+
+    // Actualizar el usuario y obtener el resultado actualizado
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      { $set: updateData },
+      { new: true } // Para recibir el documento actualizado como respuesta
+    );
+
+    // Calcular el puntaje de completitud manualmente
+    const completionScore = User.calculateCompletionScore(updatedUser);
+
+    // Actualizar el puntaje de completitud si es necesario
+    if (updatedUser.profileCompletionScore !== completionScore) {
+      updatedUser.profileCompletionScore = completionScore;
+      await updatedUser.save();
+    }
+
+    // Preparar la respuesta eliminando campos sensibles
+    const userResponse = {
+      _id: updatedUser._id,
+      email: updatedUser.email,
+      firstName: updatedUser.firstName,
+      lastName: updatedUser.lastName,
+      name: updatedUser.name,
+      avatar: updatedUser.avatar,
+      contact: updatedUser.contact,
+      address: updatedUser.address,
+      address1: updatedUser.address1,
+      country: updatedUser.country,
+      state: updatedUser.state,
+      zipCode: updatedUser.zipCode,
+      designation: updatedUser.designation,
+      dob: updatedUser.dob,
+      note: updatedUser.note,
+      skill: updatedUser.skill,
+      url: updatedUser.url,
+      profileCompletionScore: updatedUser.profileCompletionScore,
+      // No incluimos campos sensibles como password
+    };
+
+    logger.info(`Usuario actualizado: ${userId}, nuevo puntaje de completitud: ${completionScore}%`);
+
+    return res.status(200).json({
+      success: true,
+      data: userResponse,
+      message: "Perfil actualizado correctamente"
+    });
+
+  } catch (error) {
+    logger.error(`Error al actualizar perfil: ${error.message}`);
+    return res.status(500).json({
+      success: false,
+      message: "Error al actualizar el perfil",
+      error: error.message
+    });
+  }
+};
+
+exports.changePassword = async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'Se requieren la contraseña actual y la nueva'
+      });
+    }
+
+    // Obtener el ID del usuario desde el middleware de autenticación
+    const userId = req.user._id;
+
+    // Buscar el usuario en la base de datos
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+    }
+
+    // Verificar que la contraseña actual sea correcta
+    const isPasswordValid = await user.comparePassword(currentPassword);
+
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'La contraseña actual es incorrecta'
+      });
+    }
+
+    // Validar que la nueva contraseña sea diferente a la actual
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+
+    if (isSamePassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'La nueva contraseña debe ser diferente a la actual'
+      });
+    }
+
+    // Validar requisitos de seguridad para la nueva contraseña
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        message: 'La nueva contraseña debe tener al menos 8 caracteres, incluir una letra mayúscula, una minúscula, un número y un carácter especial'
+      });
+    }
+
+    // Actualizar la contraseña
+    user.password = newPassword;
+    await user.save(); // El middleware en el modelo se encargará de hacer el hash
+
+    logger.info(`Contraseña actualizada para el usuario: ${userId}`);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Contraseña actualizada correctamente'
+    });
+
+  } catch (error) {
+    logger.error(`Error al cambiar contraseña: ${error.message}`);
+    return res.status(500).json({
+      success: false,
+      message: 'Error al cambiar la contraseña',
+      error: error.message
+    });
+  }
+};
+
+exports.requestPasswordReset = async (req, res) => {
+  try {
+    const { email } = req.body;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      // Por seguridad, no revelamos si el email existe o no
+      return res.status(200).json({
+        success: true,
+        message: "Si el correo existe en nuestro sistema, recibirás instrucciones para restablecer tu contraseña."
+      });
+    }
+
+    // Generar código de verificación de 6 dígitos
+    const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+    // Guardar código y establecer tiempo de expiración (1 hora)
+    user.verificationCode = resetCode;
+    user.resetPasswordExpires = Date.now() + 3600000; // 1 hora
+    await user.save();
+
+    // Enviar email con código de verificación
+    const subject = "Law||Analytics - Código para restablecer tu contraseña";
+    const htmlBody = `
+      <p>Hola ${user.firstName || ''},</p>
+      <p>Recibimos una solicitud para restablecer la contraseña de tu cuenta.</p>
+      <p>Tu código de verificación es: <strong>${resetCode}</strong></p>
+      <p>Este código expirará en 1 hora.</p>
+      <p>Si no solicitaste este cambio, puedes ignorar este correo.</p>
+      <p>Saludos,<br/>El equipo de Law||Analytics</p>
+    `;
+    const textBody = `
+      Hola ${user.firstName || ''},
+      
+      Recibimos una solicitud para restablecer la contraseña de tu cuenta.
+      
+      Tu código de verificación es: ${resetCode}
+      
+      Este código expirará en 1 hora.
+      
+      Si no solicitaste este cambio, puedes ignorar este correo.
+      
+      Saludos,
+      El equipo de Law||Analytics
+    `;
+
+    await sendEmail(email, subject, htmlBody, textBody);
+
+    logger.info(`Código de reseteo de contraseña enviado a: ${email}`);
+
+    res.status(200).json({
+      success: true,
+      message: "Si el correo existe en nuestro sistema, recibirás instrucciones para restablecer tu contraseña."
+    });
+  } catch (error) {
+    logger.error("Error al solicitar reseteo de contraseña:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al procesar la solicitud. Intente nuevamente más tarde."
+    });
+  }
+};
+
+// Verificar código de reseteo
+exports.verifyResetCode = async (req, res) => {
+  try {
+    const { email, code } = req.body;
+    console.log(email, code)
+    const user = await User.findOne({
+      email,
+      verificationCode: code,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Código inválido o expirado."
+      });
+    }
+
+    // Código válido, permitir reseteo
+    res.status(200).json({
+      success: true,
+      message: "Código verificado correctamente."
+    });
+  } catch (error) {
+    logger.error("Error al verificar código de reseteo:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al verificar el código. Intente nuevamente más tarde."
+    });
+  }
+};
+
+// Establecer nueva contraseña
+exports.resetPassword = async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+
+    // Validar requisitos de seguridad para la nueva contraseña
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+
+    if (!passwordRegex.test(newPassword)) {
+      return res.status(400).json({
+        success: false,
+        message: 'La contraseña debe tener al menos 8 caracteres, incluir una letra mayúscula, una minúscula, un número y un carácter especial'
+      });
+    }
+    console.log(email, code, newPassword)
+    const user = await User.findOne({
+      email,
+      verificationCode: code,
+      resetPasswordExpires: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Código inválido o expirado."
+      });
+    }
+
+    // Verificar que la nueva contraseña sea diferente a la actual
+    const isSamePassword = await bcrypt.compare(newPassword, user.password);
+
+    if (isSamePassword) {
+      return res.status(400).json({
+        success: false,
+        message: 'La nueva contraseña debe ser diferente a la actual'
+      });
+    }
+
+    // Actualizar contraseña y limpiar campos de reseteo
+    user.password = newPassword; // El middleware en el modelo se encargará de hacer el hash
+    user.verificationCode = null;
+    user.resetPasswordExpires = null;
+    await user.save();
+
+    logger.info(`Contraseña restablecida exitosamente para: ${email}`);
+
+    res.status(200).json({
+      success: true,
+      message: "Contraseña restablecida exitosamente."
+    });
+  } catch (error) {
+    logger.error("Error al resetear contraseña:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error al restablecer la contraseña. Intente nuevamente más tarde."
+    });
   }
 };

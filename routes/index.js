@@ -15,7 +15,8 @@ const taskRoutes = require("./taskRoutes");
 const emailRoutes = require("./emailRoutes");
 const tasasRoutes = require("./tasasRoutes")
 const analysisRoutes = require('./statsAnalysisRoutes');
-const supportRoutes = require('./supportRoutes.js');
+const supportRoutes = require('./supportRoutes');
+const userStatsRoutes = require("./userStatsRoutes");
 
 const router = express.Router();
 
@@ -45,6 +46,7 @@ router.use("/api/email", emailRoutes);
 router.use("/api/tasas", tasasRoutes);
 router.use('/api/stats', analysisRoutes);
 router.use('/api/support-contacts', supportRoutes);
+router.use('/api/user-stats', userStatsRoutes)
 
 
 module.exports = router;
