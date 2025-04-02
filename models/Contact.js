@@ -47,43 +47,33 @@ const ContactSchema = new mongoose.Schema(
     },
     zipCode: {
       type: String,
-      required: true,
     },
     email: {
       type: String,
-      required: true,
     },
     phone: {
       type: String,
-      required: true,
     },
     nationality: {
       type: String,
-      required: true,
     },
     document: {
       type: String,
-      required: true,
     },
     cuit: {
       type: String,
-      required: true,
     },
     status: {
       type: String,
-      required: true,
     },
     activity: {
       type: String,
-      required: true,
     },
     company: {
       type: String,
-      required: true,
     },
     fiscal: {
       type: String,
-      required: true,
     },
   },
   { timestamps: true }

@@ -10,7 +10,7 @@ const {
   logout,
   updateUserProfile,
   changePassword,
-  requestPasswordReset, verifyResetCode, resetPassword
+  requestPasswordReset, verifyResetCode, resetPassword, deactivateAccount, reactivateAccount
 } = require("../controllers/authController");
 const authMiddleware = require("../middlewares/authMiddleware");
 
@@ -29,6 +29,7 @@ router.put('/change-password', changePassword);
 router.post('/reset-request', requestPasswordReset);
 //router.post('/verify-reset-code', verifyResetCode);
 router.post('/reset', resetPassword);
-
+router.post('/deactivate-account', authMiddleware, deactivateAccount);
+router.post('/reactivate-account', authMiddleware, reactivateAccount);
 
 module.exports = router;

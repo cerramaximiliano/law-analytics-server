@@ -11,6 +11,10 @@ const {
   getFoldersByUserId,
   getFoldersById,
   getFoldersByIds,
+  updateStatus,
+  getStatusHistory,
+  getStatusStats,
+  getGlobalStatusStats
 } = require("../controllers/folderController.js");
 
 // Ruta para buscar todos los folders por userId
@@ -32,5 +36,12 @@ router.delete("/:id", deleteFolderById);
 router.put("/:id", updateFolderById);
 
 router.post("/batch", getFoldersByIds);
+
+// Nuevas rutas para gestión de estados
+router.put("/status/:id", updateStatus);
+router.get("/status-history/:id", getStatusHistory);
+router.get("/status-stats/:id", getStatusStats);
+router.get("/status-stats", getGlobalStatusStats);
+
 
 module.exports = router;

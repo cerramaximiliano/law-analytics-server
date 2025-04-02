@@ -1,0 +1,52 @@
+Estados del modelo de causas judiciales
+
+Las causas judiciales en el sistema pueden encontrarse en uno de los siguientes estados, los cuales permiten reflejar su situación procesal o administrativa dentro del flujo de gestión:
+
+Nueva: Corresponde al alta inicial de la causa. Indica que ha sido registrada en el sistema pero aún no ha tenido movimientos procesales relevantes.
+
+Pendiente (opcional): Estado intermedio que puede utilizarse tanto previo al inicio formal del trámite (por ejemplo, a la espera de documentación o validación interna) como posteriormente, cuando la causa se encuentra momentáneamente detenida (por ejemplo, en espera de resolución, plazos procesales o actuaciones externas).
+
+En proceso: Indica que la causa se encuentra en trámite activo. Comprende cualquier etapa en la que existan movimientos, resoluciones, presentaciones o actividad judicial sustancial.
+
+Cerrada: Denota que la causa ha finalizado y no requiere más seguimiento. Puede deberse a sentencia firme, archivo, desistimiento u otra causa que implique su conclusión definitiva.
+
+
+Etapas procesales (cuando la causa está "en proceso")
+Este campo permite especificar con mayor precisión el punto del proceso en el que se encuentra la causa. Las etapas se organizan en dos grandes grupos:
+
+Etapas prejudiciales
+
+Intimación: Comunicación previa al inicio de acciones legales, generalmente con plazo para cumplir una obligación.
+
+Negociación: Instancia informal donde las partes intentan arribar a un acuerdo sin judicializar el conflicto.
+
+Mediación: Procedimiento obligatorio o voluntario con la intervención de un mediador neutral, previo a iniciar demanda.
+
+Acuerdo prejudicial: Resolución del conflicto antes de iniciar el proceso judicial, con o sin homologación judicial.
+
+
+Etapas judiciales
+
+Presentación de demanda: Inicio formal del proceso judicial con la presentación de la demanda ante el juzgado competente.
+
+Traslado de demanda: Notificación al demandado para que tome conocimiento y pueda contestar la demanda.
+
+Contestación de demanda: Respuesta formal del demandado, aceptando o rechazando los hechos y derechos invocados.
+
+Audiencia preliminar: Instancia en la que el juez y las partes delimitan el objeto del proceso y resuelven cuestiones procesales iniciales.
+
+Apertura de prueba: Resolución que determina qué pruebas han sido admitidas y da inicio a la etapa probatoria.
+
+Producción de prueba: Etapa donde se llevan a cabo las medidas probatorias (testigos, pericias, exhibiciones, etc.).
+
+Alegatos: Presentaciones finales donde cada parte analiza las pruebas producidas y sostiene su posición jurídica.
+
+Sentencia de primera instancia: Decisión judicial que resuelve el conflicto planteado, susceptible de apelación.
+
+Apelación: Revisión de la sentencia por parte de una instancia superior, a pedido de alguna de las partes.
+
+Sentencia de apelación: Decisión definitiva del tribunal superior, que confirma, modifica o revoca la sentencia apelada.
+
+Ejecución: Procedimiento para hacer cumplir la sentencia firme, ya sea el cobro de una suma o cumplimiento de una obligación.
+
+Archivo: Finalización del expediente sin resolución de fondo o por inactividad, abandono u otro motivo procesal.

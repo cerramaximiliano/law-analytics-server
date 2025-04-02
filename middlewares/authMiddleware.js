@@ -25,8 +25,8 @@ const authMiddleware = async (req, res, next) => {
       algorithms: ["HS256"]
     });
 
-    if(decoded.id){
-        logger.info(`Token recibido correctamente - Creación: ${moment.unix(decoded.iat).format('DD/MM/YYYY HH:mm:ss')} - Expiración: ${moment.unix(decoded.exp).format('DD/MM/YYYY HH:mm:ss')}`)
+    if (decoded.id) {
+      logger.info(`Token recibido correctamente - Creación: ${moment.unix(decoded.iat).format('DD/MM/YYYY HH:mm:ss')} - Expiración: ${moment.unix(decoded.exp).format('DD/MM/YYYY HH:mm:ss')}`)
     }
 
     // Verificar expiración
@@ -44,6 +44,14 @@ const authMiddleware = async (req, res, next) => {
     if (!user) {
       logger.warn(`Middleware auth: Usuario no encontrado`)
       return res.status(401).json({ message: "User no longer exists" });
+    };
+
+    if (user.isActive === false) {
+      return res.status(403).json({
+        message: 'Esta cuenta ha sido desactivada',
+        accountDeactivated: true,
+        requireLogin: true
+      });
     }
 
     // Guardar el usuario en req para usarlo en rutas posteriores

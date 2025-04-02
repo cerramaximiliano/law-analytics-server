@@ -7,7 +7,8 @@ const UserAlertStatus = require("../models/UserAlertStatus");
 const tokenService = require("../services/tokenService");
 const RefreshToken = require("../models/RefreshToken");
 const bcrypt = require("bcrypt");
-
+const DeviceDetector = require('node-device-detector');
+const deviceDetector = new DeviceDetector();
 
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
@@ -141,10 +142,17 @@ exports.login = async (req, res) => {
     const user = await User.findOne({ email });
 
     if (!user || !(await user.comparePassword(password))) {
-      // Cambiar a 403 Forbidden para indicar credenciales inválidas
       return res.status(403).json({
         message: "Credenciales inválidas",
-        loginFailed: true  // Añadir bandera para manejar en el cliente
+        loginFailed: true
+      });
+    }
+
+    // Verificar si la cuenta está activa
+    if (user.isActive === false) {
+      return res.status(403).json({
+        message: "Esta cuenta ha sido desactivada. Por favor contacta con soporte o intenta reactivarla.",
+        accountDeactivated: true
       });
     }
 
@@ -171,11 +179,54 @@ exports.login = async (req, res) => {
     const isLocalDevelopment = req.headers.origin?.includes('localhost') ||
       req.headers.origin?.includes('127.0.0.1');
 
+    // Generar un ID de dispositivo si no existe
+    let deviceId = req.cookies.device_id;
+    if (!deviceId) {
+      deviceId = require('uuid').v4();
+      res.cookie('device_id', deviceId, {
+        maxAge: 365 * 24 * 60 * 60 * 1000, // 1 año
+        httpOnly: true,
+        secure: !isLocalDevelopment,
+        sameSite: isLocalDevelopment ? 'lax' : 'none'
+      });
+    }
+
+    // Registrar la información de la sesión
+    const userAgent = req.headers['user-agent'] || '';
+    const deviceInfo = deviceDetector.detect(userAgent);
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+
+    const sessionData = {
+      deviceId,
+      deviceName: deviceInfo.device?.type || 'Desconocido',
+      deviceType: deviceInfo.device?.type || 'desktop',
+      browser: deviceInfo.client?.name || 'Desconocido',
+      os: deviceInfo.os?.name || 'Desconocido',
+      ip,
+      lastActivity: new Date(),
+      location: req.body.location || '',
+      token: accessToken,
+      isCurrentSession: true
+    };
+
+    // Marcar las sesiones antiguas como no actuales
+    if (user.activeSessions) {
+      user.activeSessions.forEach(session => {
+        if (session.deviceId !== deviceId) {
+          session.isCurrentSession = false;
+        }
+      });
+    }
+
+    // Añadir o actualizar la sesión actual
+    user.addSession(sessionData);
+    await user.save();
+
     res.cookie(TOKEN_COOKIE_NAME, accessToken, {
       httpOnly: true,
       secure: !isLocalDevelopment,
       sameSite: isLocalDevelopment ? 'lax' : 'none',
-      maxAge: 10 * 60 * 1000 // 30 minutos
+      maxAge: 30 * 60 * 1000 // 30 minutos
     });
 
     res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
@@ -264,6 +315,16 @@ exports.googleAuth = async (req, res) => {
     const { email, given_name, family_name, picture } = payload;
 
     let user = await User.findOne({ email });
+    
+    // Si el usuario existe pero está desactivado, retornar error
+    if (user && user.isActive === false) {
+      return res.status(403).json({
+        success: false,
+        message: "Esta cuenta ha sido desactivada. Por favor contacta con soporte o intenta reactivarla.",
+        accountDeactivated: true
+      });
+    }
+    
     const updateData = {};
     if (!user?.firstName && given_name) updateData.firstName = given_name;
     if (!user?.lastName && family_name) updateData.lastName = family_name;
@@ -299,8 +360,6 @@ exports.googleAuth = async (req, res) => {
       maxAge: 7 * 24 * 60 * 60 * 1000 // 7 días
     });
 
-
-
     res.json({
       success: true,
       accessToken,
@@ -315,12 +374,12 @@ exports.googleAuth = async (req, res) => {
   }
 };
 
-
 exports.refreshTokens = async (req, res) => {
   try {
     // Obtener token de refresco de la cookie
     const refreshToken = req.cookies.refresh_token;
-    logger.info("Refresh token recibido", refreshToken)
+    const deviceId = req.cookies.device_id;
+
     if (!refreshToken) {
       return res.status(403).json({
         message: "No se encontró token de refresco",
@@ -329,7 +388,47 @@ exports.refreshTokens = async (req, res) => {
     }
 
     try {
+      // Verificar si el token existe en la base de datos
+      const storedToken = await RefreshToken.findOne({ token: refreshToken });
+      
+      if (storedToken) {
+        // Verificar si el usuario asociado está activo
+        const user = await User.findById(storedToken.user);
+        
+        if (user && user.isActive === false) {
+          // Revocar el token si el usuario está desactivado
+          await RefreshToken.findOneAndUpdate(
+            { token: refreshToken },
+            { isActive: false, revokedAt: new Date() }
+          );
+          
+          // Limpiar cookies
+          res.clearCookie(TOKEN_COOKIE_NAME);
+          res.clearCookie(REFRESH_TOKEN_COOKIE_NAME);
+          
+          return res.status(403).json({
+            message: "Esta cuenta ha sido desactivada",
+            accountDeactivated: true,
+            requireLogin: true
+          });
+        }
+      }
+      
       const tokens = await tokenService.refreshTokens(refreshToken, req, res);
+
+      // Actualizar la última actividad de la sesión si tenemos el ID de dispositivo
+      if (deviceId) {
+        // Obtener el ID de usuario del token
+        const decoded = jwt.verify(tokens.accessToken, process.env.JWT_SECRET);
+        const userId = decoded.id;
+
+        // Actualizar la última actividad
+        const user = await User.findById(userId);
+        if (user) {
+          user.updateSessionActivity(deviceId);
+          await user.save();
+        }
+      }
 
       res.status(200).json({
         message: "Tokens actualizados exitosamente",
@@ -354,14 +453,25 @@ exports.refreshTokens = async (req, res) => {
 
 exports.logout = async (req, res) => {
   try {
-    // Obtener token de refresco de la cookie
+    // Obtener token de refresco e ID de dispositivo de la cookie
     const refreshToken = req.cookies.refresh_token;
+    const deviceId = req.cookies.device_id;
+
     if (refreshToken) {
       // Invalidar token de refresco en base de datos
       await RefreshToken.findOneAndUpdate(
         { token: refreshToken },
         { isActive: false, revokedAt: new Date() }
       );
+    }
+
+    // Si tenemos ID de dispositivo y el usuario está autenticado, eliminar la sesión
+    if (deviceId && req.user && req.user._id) {
+      const user = await User.findById(req.user._id);
+      if (user) {
+        user.removeSession(deviceId);
+        await user.save();
+      }
     }
 
     // Limpiar cookies
@@ -393,6 +503,9 @@ exports.updateUserProfile = async (req, res) => {
         updateData[key] = req.body[key];
       }
     });
+
+    console.log(updateData)
+
     // Buscar el usuario actual para verificar cambios
     const currentUser = await User.findById(userId);
     if (!currentUser) {
@@ -684,6 +797,175 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error al restablecer la contraseña. Intente nuevamente más tarde."
+    });
+  }
+};
+
+exports.deactivateAccount = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    
+    // Buscar el usuario
+    const user = await User.findById(userId);
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+    }
+    
+    // Verificar si el usuario ya tiene la propiedad isActive en false
+    if (user.isActive === false) {
+      return res.status(400).json({
+        success: false,
+        message: 'La cuenta ya está desactivada'
+      });
+    }
+    
+    // Requiere confirmación de contraseña por seguridad
+    const { password } = req.body;
+    
+    if (!password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Se requiere la contraseña para confirmar la desactivación de la cuenta'
+      });
+    }
+    
+    // Verificar la contraseña
+    const isPasswordValid = await user.comparePassword(password);
+    
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Contraseña incorrecta'
+      });
+    }
+    
+    // Marcar la cuenta como inactiva
+    user.isActive = false;
+    
+    // Registrar la fecha de desactivación
+    user.deactivatedAt = new Date();
+    
+    // Guardar el usuario
+    await user.save();
+    
+    // Revocar todos los refresh tokens del usuario
+    await RefreshToken.updateMany(
+      { user: userId, isActive: true },
+      { isActive: false, revokedAt: new Date() }
+    );
+    
+    // Limpiar cookies
+    res.clearCookie(TOKEN_COOKIE_NAME);
+    res.clearCookie(REFRESH_TOKEN_COOKIE_NAME);
+    
+    logger.info(`Cuenta desactivada: ${userId}`);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Cuenta desactivada correctamente'
+    });
+    
+  } catch (error) {
+    logger.error(`Error al desactivar cuenta: ${error.message}`);
+    return res.status(500).json({
+      success: false,
+      message: 'Error al desactivar la cuenta',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Reactivar una cuenta previamente desactivada
+ */
+exports.reactivateAccount = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: 'Se requiere email y contraseña'
+      });
+    }
+    
+    // Buscar el usuario - importante: incluir usuarios inactivos
+    const user = await User.findOne({ email });
+    
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Usuario no encontrado'
+      });
+    }
+    
+    // Verificar si la cuenta está desactivada
+    if (user.isActive !== false) {
+      return res.status(400).json({
+        success: false,
+        message: 'La cuenta ya está activa'
+      });
+    }
+    
+    // Verificar la contraseña
+    const isPasswordValid = await user.comparePassword(password);
+    
+    if (!isPasswordValid) {
+      return res.status(401).json({
+        success: false,
+        message: 'Credenciales inválidas'
+      });
+    }
+    
+    // Reactivar la cuenta
+    user.isActive = true;
+    user.deactivatedAt = undefined; // Eliminar la fecha de desactivación
+    
+    // Guardar el usuario
+    await user.save();
+    
+    // Generar nuevos tokens
+    const accessToken = tokenService.generateAccessToken(user);
+    const refreshToken = await tokenService.generateRefreshToken(user);
+    
+    // Configurar cookies
+    const isLocalDevelopment = req.headers.origin?.includes('localhost') ||
+      req.headers.origin?.includes('127.0.0.1');
+    
+    res.cookie(TOKEN_COOKIE_NAME, accessToken, {
+      httpOnly: true,
+      secure: !isLocalDevelopment,
+      sameSite: isLocalDevelopment ? 'lax' : 'none',
+      maxAge: 30 * 60 * 1000 // 30 minutos
+    });
+    
+    res.cookie(REFRESH_TOKEN_COOKIE_NAME, refreshToken, {
+      httpOnly: true,
+      secure: !isLocalDevelopment,
+      sameSite: isLocalDevelopment ? 'lax' : 'none',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 días
+    });
+    
+    logger.info(`Cuenta reactivada: ${user._id}`);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Cuenta reactivada correctamente',
+      user: filterUserData(user),
+      accessToken,
+      refreshToken
+    });
+    
+  } catch (error) {
+    logger.error(`Error al reactivar cuenta: ${error.message}`);
+    return res.status(500).json({
+      success: false,
+      message: 'Error al reactivar la cuenta',
+      error: error.message
     });
   }
 };

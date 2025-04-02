@@ -72,20 +72,20 @@ const initializeApp = async () => {
     // Obtener y escribir secretos
     const secretsString = await retrieveSecrets();
     await fs.writeFile(".env", secretsString);
-    
+
     // Cargar variables de entorno
     dotenv.config();
-    
+
     // Ahora importamos las cosas que dependen de variables de entorno
     const connectDB = require("./utils/db");
     const routes = require("./routes");
-    
+
     // Conectar a la base de datos
     connectDB();
-    
+
     // Configurar rutas
     app.use(routes);
-    
+
     // Middleware para rutas no encontradas (404)
     app.use((req, res, next) => {
       logger.warn(`Ruta no encontrada: ${req.method} ${req.url}`);
@@ -94,18 +94,20 @@ const initializeApp = async () => {
         error: 'Ruta no encontrada'
       });
     });
-    
+
     // Middleware de manejo de errores generales
     app.use((err, req, res, next) => {
       logger.error(`Error en la solicitud ${req.method} ${req.url}: ${err.message}`);
       logger.error(err.stack);
-      
+
       res.status(err.statusCode || 500).json({
         success: false,
         error: err.message || 'Error del servidor'
       });
     });
-    
+
+
+
     logger.info("Configuración asíncrona completada correctamente");
   } catch (err) {
     console.error("Error configurando secretos:", err);

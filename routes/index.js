@@ -17,7 +17,9 @@ const tasasRoutes = require("./tasasRoutes")
 const analysisRoutes = require('./statsAnalysisRoutes');
 const supportRoutes = require('./supportRoutes');
 const userStatsRoutes = require("./userStatsRoutes");
-
+const lawyerCollegeRoutes = require('./lawyerCollegeRoutes');
+const stagesRoutes = require("./stagesRoutes");
+const sessionRoutes = require("./sessionRoutes");
 const router = express.Router();
 
 // Configurar una ruta base para verificar que la API está funcionando
@@ -47,6 +49,8 @@ router.use("/api/tasas", tasasRoutes);
 router.use('/api/stats', analysisRoutes);
 router.use('/api/support-contacts', supportRoutes);
 router.use('/api/user-stats', userStatsRoutes)
-
+router.use('/api/colleges', lawyerCollegeRoutes)
+router.use('/api/stages', stagesRoutes);
+router.use('/api/sessions', sessionRoutes)
 
 module.exports = router;
